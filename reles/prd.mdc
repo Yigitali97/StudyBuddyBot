@@ -1,0 +1,602 @@
+# StudyBuddy Telegram Bot - Product Requirements Document
+
+## 1. Product Overview
+
+**Product Name:** StudyBuddy
+**Version:** 1.0 (MVP)
+**Target Audience:** Students (high school, college, university)
+**Purpose:** Help students manage assignments and exam deadlines with automated reminders through Telegram
+
+### Value Proposition
+StudyBuddy reduces stress and improves academic performance by ensuring students never miss assignment or exam deadlines through proactive, automated reminders delivered directly to their Telegram.
+
+---
+
+## 2. User Stories
+
+### Primary User Stories
+- **US-001:** As a student, I want to quickly add an assignment or exam with a due date so I can track all my deadlines in one place
+- **US-002:** As a student, I want to view all my upcoming tasks sorted by date so I can prioritize my work
+- **US-003:** As a student, I want to receive automatic reminders 24 hours before a deadline so I don't forget important due dates
+- **US-004:** As a student, I want to delete completed tasks so my list stays clean and relevant
+- **US-005:** As a student, I want to see available commands so I know how to use the bot
+
+### Secondary User Stories (Future Scope)
+- **US-006:** As a student, I want to edit existing tasks in case details change
+- **US-007:** As a student, I want to categorize tasks by subject/course
+- **US-008:** As a student, I want to set custom reminder times (48h, 1 week before)
+- **US-009:** As a student, I want to mark tasks as completed without deleting them for record-keeping
+
+---
+
+## 3. Core Features (MVP)
+
+### Feature 1: Add Task
+**Command:** `/add`
+**Priority:** P0 (Critical)
+
+**Functional Requirements:**
+- FR-1.1: User initiates task creation with `/add` command
+- FR-1.2: Bot prompts for task type: "Assignment" or "Exam"
+- FR-1.3: Bot prompts for task name/title (max 200 characters)
+- FR-1.4: Bot prompts for due date in format: DD/MM/YYYY or DD.MM.YYYY
+- FR-1.5: Bot validates date format and ensures date is not in the past
+- FR-1.6: Bot confirms task creation with summary display
+- FR-1.7: System stores task with user_id, task_type, title, due_date, created_at
+
+**User Flow:**
+```
+User: /add
+Bot: "What type of task?
+     1️⃣ Assignment
+     2️⃣ Exam"
+User: 1
+Bot: "What's the assignment name?"
+User: Math Homework Chapter 5
+Bot: "When is it due? (DD/MM/YYYY)"
+User: 15/12/2025
+Bot: "✅ Added: Math Homework Chapter 5
+     📅 Due: December 15, 2025
+     ⏰ Reminder set for December 14, 2025"
+```
+
+**Error Handling:**
+- Invalid date format → "Please use DD/MM/YYYY format"
+- Past date → "Date must be in the future"
+- Timeout (2 min inactivity) → "Task creation cancelled. Use /add to try again"
+
+---
+
+### Feature 2: List Tasks
+**Command:** `/list`
+**Priority:** P0 (Critical)
+
+**Functional Requirements:**
+- FR-2.1: Display all upcoming tasks sorted by due date (earliest first)
+- FR-2.2: Show task ID, type icon (📝 Assignment / 📖 Exam), title, and due date
+- FR-2.3: Display relative time (e.g., "in 3 days", "tomorrow", "today")
+- FR-2.4: Handle empty state gracefully
+- FR-2.5: Limit display to 50 tasks (paginate if needed - future enhancement)
+
+**User Flow:**
+```
+User: /list
+Bot: "📋 Your Upcoming Tasks:
+
+     1. 📝 Math Homework Chapter 5
+        Due: Dec 15, 2025 (in 5 days)
+
+     2. 📖 Physics Midterm Exam
+        Due: Dec 18, 2025 (in 8 days)
+
+     3. 📝 Essay Draft
+        Due: Dec 20, 2025 (in 10 days)"
+```
+
+**Empty State:**
+```
+Bot: "🎉 No upcoming tasks!
+     Use /add to create a new task."
+```
+
+---
+
+### Feature 3: Delete Task
+**Command:** `/delete`
+**Priority:** P0 (Critical)
+
+**Functional Requirements:**
+- FR-3.1: Display numbered list of all user's tasks
+- FR-3.2: User selects task by number
+- FR-3.3: Bot requests confirmation before deletion
+- FR-3.4: Remove task from database
+- FR-3.5: Confirm deletion with task details
+
+**User Flow:**
+```
+User: /delete
+Bot: "Select a task to delete:
+     1. Math Homework Chapter 5 (Dec 15)
+     2. Physics Midterm (Dec 18)
+     3. Essay Draft (Dec 20)"
+User: 1
+Bot: "Are you sure you want to delete:
+     📝 Math Homework Chapter 5 (Due: Dec 15)?
+
+     Reply: YES to confirm, NO to cancel"
+User: YES
+Bot: "✅ Deleted: Math Homework Chapter 5"
+```
+
+---
+
+### Feature 4: Automatic Reminders
+**Background Process**
+**Priority:** P0 (Critical)
+
+**Functional Requirements:**
+- FR-4.1: Check database every hour for tasks due in 24-25 hours
+- FR-4.2: Send reminder message to user via Telegram
+- FR-4.3: Mark task as "reminded" to prevent duplicate reminders
+- FR-4.4: Include task details in reminder message
+- FR-4.5: Continue running even if deployment restarts
+
+**Reminder Message Format:**
+```
+Bot: "⏰ REMINDER
+
+     📝 Math Homework Chapter 5
+     Due: Tomorrow, December 15 at 11:59 PM
+
+     Don't forget! 📚"
+```
+
+**Technical Requirements:**
+- TR-4.1: Use APScheduler or asyncio tasks for periodic checks
+- TR-4.2: Run reminder job every 60 minutes
+- TR-4.3: Query: `SELECT * FROM tasks WHERE reminded = FALSE AND due_date BETWEEN NOW() + 24h AND NOW() + 25h`
+- TR-4.4: Handle timezone correctly (store UTC, display user local time - future enhancement)
+
+---
+
+### Feature 5: Help Command
+**Command:** `/help`
+**Priority:** P0 (Critical)
+
+**Functional Requirements:**
+- FR-5.1: Display all available commands with descriptions
+- FR-5.2: Provide usage examples
+- FR-5.3: Include contact/support information
+
+**Message Content:**
+```
+Bot: "📚 StudyBuddy Help
+
+     Available Commands:
+
+     /start - Start the bot and see welcome message
+     /add - Add a new assignment or exam
+     /list - View all upcoming tasks
+     /delete - Remove a completed task
+     /help - Show this help message
+
+     💡 Tips:
+     • Dates must be in DD/MM/YYYY format
+     • You'll get reminders 24h before deadlines
+     • Use /list to check what's coming up
+
+     Questions? Report issues: @yourusername"
+```
+
+---
+
+### Feature 6: Start/Welcome
+**Command:** `/start`
+**Priority:** P0 (Critical)
+
+**Functional Requirements:**
+- FR-6.1: Greet new users
+- FR-6.2: Create user record in database if first time
+- FR-6.3: Explain bot purpose
+- FR-6.4: Guide user to first action
+
+**Welcome Message:**
+```
+Bot: "👋 Welcome to StudyBuddy!
+
+     I help you manage assignments and exam deadlines
+     so you never miss important dates.
+
+     🚀 Quick Start:
+     Use /add to create your first task
+     Use /help to see all commands
+
+     Let's ace those deadlines! 📚✨"
+```
+
+---
+
+## 4. Technical Architecture
+
+### 4.1 Technology Stack
+
+| Component | Technology | Justification |
+|-----------|-----------|---------------|
+| Framework | aiogram v3 | Modern async framework, excellent FSM support, active development |
+| Runtime | Python 3.11 | Stable, great async support, wide library ecosystem |
+| Database (MVP) | SQLite | Zero-config, file-based, sufficient for MVP |
+| Database (Production) | PostgreSQL | Robust, scalable, handles concurrent connections |
+| Deployment | Render (Free Tier) | Easy deployment, persistent storage, free SSL |
+| Environment Variables | python-dotenv | Secure token management |
+| Task Scheduling | APScheduler | Reliable background job scheduling |
+| Testing | pytest, pytest-asyncio | Industry standard, async support |
+| Logging | Python logging | Built-in, configurable, timestamp support |
+
+### 4.2 Database Schema
+
+```sql
+-- Users Table
+CREATE TABLE users (
+    user_id INTEGER PRIMARY KEY,  -- Telegram user ID
+    username TEXT,
+    first_name TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tasks Table
+CREATE TABLE tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    task_type TEXT NOT NULL,  -- 'assignment' or 'exam'
+    title TEXT NOT NULL,
+    due_date DATE NOT NULL,
+    reminded BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- Indexes for performance
+CREATE INDEX idx_tasks_user_id ON tasks(user_id);
+CREATE INDEX idx_tasks_due_date ON tasks(due_date);
+CREATE INDEX idx_tasks_reminded ON tasks(reminded);
+```
+
+### 4.3 Project Structure
+
+```
+studybuddy-bot/
+├── .env                    # Environment variables (GITIGNORED)
+├── .env.example           # Template for environment setup
+├── .gitignore
+├── requirements.txt
+├── README.md
+├── main.py                # Entry point
+├── config.py              # Configuration management
+├── database/
+│   ├── __init__.py
+│   ├── db.py             # Database connection and initialization
+│   └── models.py         # Database operations (CRUD)
+├── handlers/
+│   ├── __init__.py
+│   ├── start.py          # /start command handler
+│   ├── add.py            # /add command + FSM
+│   ├── list.py           # /list command handler
+│   ├── delete.py         # /delete command + FSM
+│   └── help.py           # /help command handler
+├── states/
+│   └── task_states.py    # FSM states for multi-step commands
+├── services/
+│   ├── __init__.py
+│   └── reminder.py       # Background reminder scheduler
+├── utils/
+│   ├── __init__.py
+│   ├── validators.py     # Date validation, input sanitization
+│   └── formatters.py     # Message formatting helpers
+├── keyboards/
+│   ├── __init__.py
+│   └── reply.py          # Inline and reply keyboards
+└── tests/
+    ├── __init__.py
+    ├── test_handlers.py
+    ├── test_database.py
+    └── test_validators.py
+```
+
+### 4.4 Environment Variables
+
+```bash
+# .env file (NEVER COMMIT THIS)
+BOT_TOKEN=your_telegram_bot_token_here
+DATABASE_URL=sqlite:///studybuddy.db  # MVP
+# DATABASE_URL=postgresql://user:pass@host:port/db  # Production
+LOG_LEVEL=INFO
+REMINDER_INTERVAL_MINUTES=60
+```
+
+---
+
+## 5. Implementation Phases
+
+### Phase 1: Foundation (Week 1)
+**Goal:** Set up project structure and basic bot functionality
+
+**Tasks:**
+1. Initialize project repository with proper structure
+2. Set up virtual environment and install dependencies
+3. Configure environment variables and .gitignore
+4. Create database schema and connection logic
+5. Implement `/start` command with user registration
+6. Implement `/help` command
+7. Set up logging system
+8. Write basic unit tests for database operations
+
+**Deliverables:**
+- Working bot that responds to `/start` and `/help`
+- Database properly initialized
+- Test suite with >80% coverage for DB operations
+
+**Success Criteria:**
+- [ ] Bot responds to commands within 1 second
+- [ ] Database operations succeed without errors
+- [ ] All tests pass
+- [ ] Logs capture all important events
+
+---
+
+### Phase 2: Core Task Management (Week 2)
+**Goal:** Implement add, list, and delete functionality
+
+**Tasks:**
+1. Implement `/add` command with FSM for multi-step flow
+   - Task type selection
+   - Title input
+   - Date input with validation
+2. Create date validation utility functions
+3. Implement `/list` command with formatted output
+4. Implement `/delete` command with confirmation flow
+5. Create inline keyboards for task type selection
+6. Write unit tests for all handlers
+7. Test error handling and edge cases
+
+**Deliverables:**
+- Fully functional task CRUD operations
+- User-friendly conversational flows
+- Input validation preventing bad data
+
+**Success Criteria:**
+- [ ] Users can add tasks successfully 100% of the time with valid input
+- [ ] Invalid dates are caught with helpful error messages
+- [ ] Task list displays correctly with proper sorting
+- [ ] Delete operation prevents accidental deletions with confirmation
+- [ ] All tests pass with >85% coverage
+
+---
+
+### Phase 3: Reminder System (Week 3)
+**Goal:** Implement automated reminder notifications
+
+**Tasks:**
+1. Set up APScheduler for background jobs
+2. Implement reminder checker function
+3. Create reminder message formatter
+4. Add `reminded` flag logic to prevent duplicates
+5. Test reminder timing accuracy
+6. Handle timezone considerations (UTC storage)
+7. Add logging for reminder events
+8. Test bot recovery after restart
+
+**Deliverables:**
+- Background job running every 60 minutes
+- Accurate reminders sent 24 hours before due date
+- Persistent reminder state across restarts
+
+**Success Criteria:**
+- [ ] Reminders sent within 60-minute window before 24h deadline
+- [ ] No duplicate reminders sent for same task
+- [ ] Reminder process continues after bot restart
+- [ ] All reminder events logged properly
+- [ ] Tests cover reminder logic
+
+---
+
+### Phase 4: Testing & Refinement (Week 4)
+**Goal:** Comprehensive testing and UX improvements
+
+**Tasks:**
+1. End-to-end testing with real Telegram accounts
+2. Stress test with multiple concurrent users
+3. Refine error messages for clarity
+4. Add more helpful feedback messages
+5. Optimize database queries
+6. Improve message formatting and emoji usage
+7. Write user documentation/README
+8. Security audit (input sanitization, SQL injection prevention)
+
+**Deliverables:**
+- Production-ready bot with polished UX
+- Complete test coverage (>90%)
+- User documentation
+
+**Success Criteria:**
+- [ ] Bot handles 50+ concurrent users without issues
+- [ ] Response time <2 seconds for all commands
+- [ ] All edge cases handled gracefully
+- [ ] No security vulnerabilities found
+- [ ] Documentation complete and clear
+
+---
+
+### Phase 5: Deployment (Week 5)
+**Goal:** Deploy to production environment
+
+**Tasks:**
+1. Create Render account and project
+2. Configure deployment settings
+3. Migrate to PostgreSQL if needed
+4. Set up environment variables in Render
+5. Deploy bot and verify functionality
+6. Set up monitoring and alerting
+7. Create backup strategy
+8. Test all features in production
+9. Soft launch with 5-10 beta users
+
+**Deliverables:**
+- Live bot accessible via Telegram
+- Monitoring dashboard set up
+- Backup system in place
+
+**Success Criteria:**
+- [ ] Bot accessible 24/7 with 99% uptime
+- [ ] All features work in production
+- [ ] Beta users successfully complete all user flows
+- [ ] Logs accessible for debugging
+- [ ] Automated daily database backups configured
+
+---
+
+## 6. Non-Functional Requirements
+
+### Performance
+- **NFR-1:** Command response time <2 seconds for 95% of requests
+- **NFR-2:** Support 100+ concurrent users without degradation
+- **NFR-3:** Database queries execute in <100ms
+
+### Reliability
+- **NFR-4:** 99% uptime (allow 7.2 hours downtime/month)
+- **NFR-5:** Zero data loss during crashes (database transactions)
+- **NFR-6:** Reminder system recovers gracefully after downtime
+
+### Security
+- **NFR-7:** Bot token stored securely in environment variables
+- **NFR-8:** All user input sanitized to prevent SQL injection
+- **NFR-9:** Database access restricted to bot only
+
+### Usability
+- **NFR-10:** All commands complete within 5 user interactions
+- **NFR-11:** Error messages explain what went wrong and how to fix it
+- **NFR-12:** Bot responds in conversational, friendly tone
+
+### Maintainability
+- **NFR-13:** Code coverage >85% with unit and integration tests
+- **NFR-14:** All functions documented with docstrings
+- **NFR-15:** Logging captures all errors with stack traces
+
+---
+
+## 7. Risk Assessment
+
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| Telegram API rate limiting | Medium | High | Implement rate limit handling, queue messages |
+| Database corruption | Low | High | Regular backups, use transactions, test recovery |
+| Timezone confusion | High | Medium | Store UTC, document clearly, add timezone support (v2) |
+| Spam/abuse by users | Medium | Medium | Rate limit per user, implement /block command (v2) |
+| Reminder job fails silently | Medium | High | Health check endpoint, monitoring alerts |
+| Deployment platform downtime | Low | High | Document migration process, have backup deployment ready |
+
+---
+
+## 8. Future Enhancements (Post-MVP)
+
+### Version 1.1 Features
+- **FE-1:** Edit existing tasks (`/edit` command)
+- **FE-2:** Task categories/subjects with color coding
+- **FE-3:** Custom reminder times (48h, 1 week options)
+- **FE-4:** Mark task as complete without deleting
+- **FE-5:** Export task history to PDF/CSV
+
+### Version 1.2 Features
+- **FE-6:** Recurring tasks (weekly quizzes, etc.)
+- **FE-7:** Study streak tracking and gamification
+- **FE-8:** Group study coordination features
+- **FE-9:** Integration with Google Calendar
+- **FE-10:** Study timer and Pomodoro tracking
+
+### Version 2.0 Features
+- **FE-11:** AI-powered study planning
+- **FE-12:** Collaborative group assignments
+- **FE-13:** Note-taking and flashcard features
+- **FE-14:** Analytics dashboard (web interface)
+
+---
+
+## 9. Success Metrics
+
+### MVP Success Criteria (Month 1)
+- 50+ active users
+- 200+ tasks created
+- 90%+ reminder delivery rate
+- <5 critical bugs reported
+- 4.0+ average user rating
+
+### Growth Metrics (Month 3)
+- 500+ active users
+- 20% monthly user retention
+- <1% error rate for all operations
+- 50+ daily active users
+
+### User Satisfaction
+- Task creation success rate >95%
+- Average session time: 2-5 minutes
+- Users receive reminders they find helpful (survey)
+
+---
+
+## 10. Dependencies & Requirements
+
+### Required
+- Telegram Bot API token (from @BotFather)
+- Python 3.11+ environment
+- Internet connection for deployment
+- 512MB RAM minimum for hosting
+
+### Optional
+- Render account (free tier) or alternative hosting
+- PostgreSQL database (production)
+- Monitoring service (e.g., UptimeRobot)
+
+---
+
+## 11. Timeline Summary
+
+| Phase | Duration | Milestone |
+|-------|----------|-----------|
+| Phase 1: Foundation | Week 1 | Basic bot structure and commands |
+| Phase 2: Task Management | Week 2 | Full CRUD operations working |
+| Phase 3: Reminders | Week 3 | Automated notifications active |
+| Phase 4: Testing | Week 4 | Production-ready quality |
+| Phase 5: Deployment | Week 5 | Live bot with monitoring |
+
+**Total MVP Timeline:** 5 weeks
+
+---
+
+## 12. Appendix
+
+### A. Example Requirements.txt
+```
+aiogram==3.4.1
+aiosqlite==0.19.0
+APScheduler==3.10.4
+python-dotenv==1.0.0
+pytest==7.4.3
+pytest-asyncio==0.21.1
+```
+
+### B. Useful Resources
+- [aiogram Documentation](https://docs.aiogram.dev/en/latest/)
+- [Telegram Bot API](https://core.telegram.org/bots/api)
+- [APScheduler Guide](https://apscheduler.readthedocs.io/)
+- [Render Deployment Docs](https://render.com/docs)
+
+### C. Contact Information
+- **Product Owner:** [Your Name]
+- **Repository:** [GitHub URL]
+- **Support:** [Support Channel]
+
+---
+
+**Document Version:** 1.0
+**Last Updated:** December 10, 2025
+**Status:** Draft → Review → Approved
